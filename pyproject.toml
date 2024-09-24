@@ -1,0 +1,16 @@
+[project]
+name = "ruff_analyze_tree"
+version = "0.1.0"
+description = "Turns the output of `ruff analyze graph` into a colored tree"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "rich>=13.8.1",
+]
+
+[project.scripts]
+ruff-analyze-tree = "ruff_analyze_tree:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
