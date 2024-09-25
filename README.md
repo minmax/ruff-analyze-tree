@@ -8,8 +8,9 @@ Turns the output of `ruff analyze graph` into a colored tree.
 git clone git@github.com:fastapi/fastapi.git && cd fastapi
 uvx ruff analyze graph fastapi | uvx --from https://github.com/minmax/ruff-analyze-tree.git ruff-analyze-tree
 ```
+
 <p align="center">
-  <img width="435" height="334" src="https://github.com/user-attachments/assets/3882e9ef-f96c-4360-bae4-8deac0c0b554">
+  <img width="403" height="804" src="https://github.com/user-attachments/assets/14af2f7b-48b4-4ee8-bf14-07ae5dc6db71">
 </p>
 
 ## All in one with `uvx`:
