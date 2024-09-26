@@ -10,7 +10,7 @@ uvx ruff analyze graph fastapi | uvx --from https://github.com/minmax/ruff-analy
 ```
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/023016f2-4064-4aa2-a41d-0c36a41c772a">
+  <img src="https://github.com/user-attachments/assets/a78231ca-39f9-410f-bf75-f01a2a6806c8">
 </p>
 
 ## All in one with `uvx`:
