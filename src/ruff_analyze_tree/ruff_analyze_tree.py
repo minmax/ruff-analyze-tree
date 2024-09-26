@@ -45,10 +45,12 @@ ruff analyze graph src | python -m ruff_analyze_tree
 
 Options:
     "-q {percentile}" - Сommon boundary for dividing into good (green) / bad (red), e.g. "-q 99.9"
-    "--hide-zero" - Don't show files without dependencies.
-    "--hide-deps" - Don't show dependencies.
     "--deps" - Show only dependencies.
+    "--hide-counters" - Don't show relations counters.
+    "--hide-deps" - Don't show dependencies.
     "--hide-stats" - Don't show statistics.
+    "--hide-zero" - Don't show files without dependencies.
+    "--no-color" - Disable colors.
 """.strip()
 
 
@@ -69,6 +71,8 @@ def main() -> None:
     hide_deps = "--hide-deps" in sys.argv
     only_deps = "--deps" in sys.argv
     hide_stats = "--hide-stats" in sys.argv
+    uncolorize = "--no-color" in sys.argv
+    hide_counters = "--hide-counters" in sys.argv
 
     quantile_param = (
         float(sys.argv[sys.argv.index("-q") + 1]) if "-q" in sys.argv else 95
@@ -90,8 +94,16 @@ def main() -> None:
     )
 
     relations_counters = tuple(counted_dependencies.values())
-    quantiles = statistics.quantiles(relations_counters, n=100 * QUANTILE_FACTOR + 1)
-    dependencies_quantile = int(quantiles[max(int(quantile) - 1, 0)])
+    if len(relations_counters) >= 2:
+        quantiles = statistics.quantiles(
+            relations_counters, n=100 * QUANTILE_FACTOR + 1
+        )
+        dependencies_quantile = int(quantiles[max(int(quantile) - 1, 0)])
+        show_numbers = not hide_counters
+    else:
+        dependencies_quantile = 0
+        uncolorize = True
+        show_numbers = False
 
     draw_options = DrawOptions(
         quantile=quantile_param,
@@ -99,6 +111,8 @@ def main() -> None:
         skip_dependencies=hide_deps,
         only_deps=only_deps,
         skip_zero=hide_zero,
+        uncolorize=uncolorize,
+        show_numbers=show_numbers,
     )
 
     visible_first_level = [
@@ -129,6 +143,8 @@ class DrawOptions:
     skip_dependencies: bool = False
     only_deps: bool = False
     skip_zero: bool = False
+    uncolorize: bool = False
+    show_numbers: bool = True
 
     @property
     def colorize(self) -> bool:
@@ -292,10 +308,13 @@ def draw_package(parent: Tree, package: Package, options: DrawOptions) -> None:
     #     else None
     # )
     star = "*" if package.is_dependency else ""
+    numers = (
+        f" ({package.direct_relations}) {{{package.children_relations}}}"
+        if options.show_numbers
+        else ""
+    )
     new_node = parent.add(
-        escape(
-            f"{package.name}{star} ({package.direct_relations}) {{{package.children_relations}}}"
-        ),
+        escape(f"{package.name}{star}{numers}"),
         style=get_style(package, options),
     )
 
@@ -313,14 +332,15 @@ def draw_module(parent: Tree, module: Module, options: DrawOptions) -> None:
     #     else None
     # )
     star = "*" if module.is_dependency else ""
+    numers = f" ({module.direct_relations})" if options.show_numbers else ""
     parent.add(
-        f"{module.name}{star} ({module.direct_relations})",
+        f"{module.name}{star}{numers}",
         style=get_style(module, options),
     )
 
 
 def get_style(module: Package | Module, options: DrawOptions) -> Style | None:
-    if options.only_deps:
+    if options.only_deps or options.uncolorize:
         return None
 
     return get_color(module.direct_relations, options.dependencies_quantile)
