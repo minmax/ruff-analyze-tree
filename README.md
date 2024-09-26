@@ -16,7 +16,7 @@ uvx ruff analyze graph fastapi | uvx --from https://github.com/minmax/ruff-analy
 ## All in one with `uvx`:
 
 ```bash
-ruff analyze graph src | uvx --from https://github.com/minmax/ruff-analyze-tree.git ruff-analyze-tree --zero --stat -q 99.9
+ruff analyze graph src | uvx --from https://github.com/minmax/ruff-analyze-tree.git ruff-analyze-tree
 ```
 
 or step by step
@@ -30,5 +30,5 @@ uv pip install https://github.com/minmax/ruff-analyze-tree.git
 ## Use:
 
 ```bash
-ruff analyze graph src | python -m ruff_analyze_tree --zero --stat -q 99.9
+ruff analyze graph src | python -m ruff_analyze_tree
 ```
