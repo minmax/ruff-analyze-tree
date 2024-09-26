@@ -32,3 +32,18 @@ uv pip install https://github.com/minmax/ruff-analyze-tree.git
 ```bash
 ruff analyze graph src | python -m ruff_analyze_tree
 ```
+
+## Options
+`-q {percentile}` - Сommon boundary for dividing into good (green) / bad (red), e.g. "-q 99.9"
+
+`--deps` - Show only dependencies.
+
+`--hide-counters` - Don't show relations counters.
+
+`--hide-deps` - Don't show dependencies.
+
+`--hide-stats` - Don't show statistics.
+
+`--hide-zero` - Don't show files without dependencies.
+
+`--no-color` - Disable colors.
