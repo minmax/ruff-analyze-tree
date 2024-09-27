@@ -9,16 +9,12 @@ import posixpath
 import statistics
 import sys
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from functools import cache
 from itertools import chain
 from operator import attrgetter
-from typing import (
-    Collection,
-    Self,
-    TypeAlias,
-)
+from typing import Self, TypeAlias
 
 from rich.console import Console
 from rich.markup import escape
@@ -35,6 +31,7 @@ from ruff_analyze_tree.tools import unique
 from ruff_analyze_tree.types import (
     ImportPath,
     ImportPathOrRoot,
+    RootPath,
     RuffPythonicData,
     RuffRawData,
 )
@@ -44,8 +41,9 @@ Add ruff output to script:
 ruff analyze graph src | python -m ruff_analyze_tree
 
 Options:
-    "-q {percentile}" - Сommon boundary for dividing into good (green) / bad (red), e.g. "-q 99.9"
-    "--deps" - Show only dependencies.
+    "-q {percentile}" - Common boundary for dividing into good (green) / bad (red), e.g. "-q 99.9".
+    "--deps {module_import_path}" - Show only dependents for specific module.
+    "--show-deps" - Show only dependencies.
     "--hide-counters" - Don't show relations counters.
     "--hide-deps" - Don't show dependencies.
     "--hide-stats" - Don't show statistics.
@@ -69,18 +67,25 @@ def main() -> None:
 
     hide_zero = "--hide-zero" in sys.argv
     hide_deps = "--hide-deps" in sys.argv
-    only_deps = "--deps" in sys.argv
+    only_deps = "--show-deps" in sys.argv
     hide_stats = "--hide-stats" in sys.argv
     uncolorize = "--no-color" in sys.argv
     hide_counters = "--hide-counters" in sys.argv
 
-    quantile_param = (
-        float(sys.argv[sys.argv.index("-q") + 1]) if "-q" in sys.argv else 95
-    )
+    deps_target_module = get_arg("--deps", "") or None
+
+    quantile_param = float(get_arg("-q", "95"))
     assert 0 <= quantile_param <= 100
     quantile = quantile_param * QUANTILE_FACTOR
 
-    data, root_import = convert_file_path_to_import_strings(json.load(sys.stdin))
+    raw_data = json.load(sys.stdin)
+    root_path = find_root_path(raw_data)
+
+    data, root_import = convert_file_path_to_import_strings(root_path, raw_data)
+    if deps_target_module:
+        data = remove_everything_except_one_main_module(
+            deps_target_module, root_path, data
+        )
 
     duplicated_dependencies = tuple(chain.from_iterable(data.values()))
     counted_dependencies = Counter(duplicated_dependencies)
@@ -128,12 +133,19 @@ def main() -> None:
 
     CONSOLE.print(tree_root)
 
-    if not hide_stats:
+    if not hide_stats and len(relations_counters) >= 2:
         CONSOLE.print()
         CONSOLE.print("Dependencies statistics:")
         CONSOLE.print(f"Arithmetic mean: {statistics.mean(relations_counters)}")
         CONSOLE.print(f"Median (middle value): {statistics.median(relations_counters)}")
         CONSOLE.print(f"Quantile ({quantile_param}%): {dependencies_quantile}")
+
+
+def get_arg(name: str, default: str) -> str:
+    try:
+        return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
+    except IndexError:
+        return default
 
 
 @dataclass(slots=True, frozen=True)
@@ -439,11 +451,35 @@ def get_or_make_package(import_path: ImportPathOrRoot, factory: PyFactory) -> Pa
     return package
 
 
-def convert_file_path_to_import_strings(
-    data: RuffRawData,
-) -> tuple[RuffPythonicData, ImportPathOrRoot]:
-    root_path = find_root_path(data)
+def remove_everything_except_one_main_module(
+    target_module_path: str, root_path: RootPath, data: RuffPythonicData
+) -> RuffPythonicData:
+    if target_module_path.endswith(".py") or "/" in target_module_path:
+        target_module_path = convert_module_filepath_to_package_name(
+            root_path, target_module_path
+        )
 
+    result = {}
+    for module, deps in data.items():
+        for dep in deps:
+            if is_sub_module(target_module_path, dep):
+                result[module] = [dep]
+                break
+
+    return result
+
+
+def is_sub_module(target: ImportPath, module: ImportPath) -> bool:
+    return (
+        target == module
+        or f"{target}.__init__" == module
+        or module.startswith(f"{target}.")
+    )
+
+
+def convert_file_path_to_import_strings(
+    root_path: RootPath, data: RuffRawData
+) -> tuple[RuffPythonicData, ImportPathOrRoot]:
     modules_map = {
         convert_module_filepath_to_package_name(root_path, name): [
             convert_module_filepath_to_package_name(root_path, dep)

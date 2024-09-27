@@ -2,10 +2,10 @@ import posixpath
 from itertools import chain
 
 from ruff_analyze_tree.tools import unique
-from ruff_analyze_tree.types import ImportPath, ImportPathOrRoot, RuffRawData
+from ruff_analyze_tree.types import ImportPath, ImportPathOrRoot, RootPath, RuffRawData
 
 
-def find_root_path(data: RuffRawData) -> str:
+def find_root_path(data: RuffRawData) -> RootPath:
     files = sorted(unique(chain(data, chain.from_iterable(data.values()))))
     return posixpath.commonpath(files[:1] + files[-1:]) if len(files) >= 2 else ""
 

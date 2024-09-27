@@ -34,9 +34,11 @@ ruff analyze graph src | python -m ruff_analyze_tree
 ```
 
 ## Options
-`-q {percentile}` - Сommon boundary for dividing into good (green) / bad (red), e.g. "-q 99.9"
+`-q {percentile}` - Common boundary for dividing into good (green) / bad (red), e.g. "-q 99.9"
 
-`--deps` - Show only dependencies.
+`--deps {module_import_path}` - Show only dependents for specific module.
+
+`--show-deps` - Show only dependencies.
 
 `--hide-counters` - Don't show relations counters.
 
